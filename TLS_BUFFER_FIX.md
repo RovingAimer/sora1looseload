@@ -1,9 +1,19 @@
-# 语言路径输出结构
+# LocaleHandler 输出缓冲布局
 
-加载器主动调用游戏LocaleHandler，为其提供 `thread_local char localizedPath[0x204]`。目标函数使用512字节字符区和偏移0x200的DWORD长度字段，完整输出对象为516字节。
+加载器调用游戏的 `LocaleHandler` 时，为输出路径提供与目标函数写入结构相符的缓冲区：
 
-原MAX_PATH数组只有260字节。游戏对短路径也写长度字段，fallback分支还会复制整个516字节对象，因此按完整ABI对象分配容量能让字符和长度字段都落在加载器提供的存储内。
+| 偏移 | 大小 | 内容 |
+| --- | ---: | --- |
+| `0x000..0x1FF` | `0x200` 字节 | 路径字符区 |
+| `0x200..0x203` | `0x004` 字节 | DWORD 长度字段 |
+| 总计 | `0x204` 字节 | 完整输出对象 |
 
-目标EXE中，RVA0x497525保存输出地址；0x4976B2及0x4977BC写长度字段；0x49786F..0x4978D4复制四个0x80字节块及尾部DWORD。当前localizedPath占用TLS+0x120..0x323，声明的TLS数据长度0x324完整容纳它。
+`InitialFileCheck` 使用每线程存储保存该对象：
 
-此修正保持safeFullPath用途、资源处理、线程初始化时机及核心接入流程。默认/O2、/MT构建与OptiScaler开启的游戏场景经过用户验证；描边主对白与即时对话的效果由独立核心维护。
+```cpp
+static thread_local char localizedPath[0x204];
+```
+
+调用前将首字节清零，再把缓冲区传给原始 `LocaleHandler`。当字符区包含路径时，加载器会按当前 locale 检查游戏目录中的对应 loose 文件，并将选中的路径交给原始 `InitialFileCheck`。每个游戏线程使用独立缓冲区。
+
+加载器使用的资源 hook 签名边界与对白核心的 EXE 校验分别见 [README_FORK.md](https://github.com/RovingAimer/sora1looseload/blob/main/README_FORK.md) 和[核心支持版本说明](https://github.com/RovingAimer/sora1dialogueoutline/blob/main/INSTALL.md)。

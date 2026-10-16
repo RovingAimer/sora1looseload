@@ -63,7 +63,7 @@ def main():
             request('/releases/' + str(old['id']), 'PATCH', {'draft': True})
 
     tag = plan['tag']
-    commit = os.environ['GITHUB_SHA']
+    commit = plan.get('release_source_commit', os.environ['GITHUB_SHA'])
     replacement = plan.get('replace_release')
     if replacement:
         release = request('/releases/' + str(replacement['id']))
