@@ -8,7 +8,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'build/packages'
-VERSION = '0.1.1'
+VERSION = '0.1.0'
 
 
 def digest(data):

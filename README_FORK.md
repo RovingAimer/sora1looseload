@@ -25,7 +25,7 @@ python tools/package_release.py
 
 ## 安装与恢复
 
-退出游戏并备份已有xinput1_4.dll，再将 `sora1looseload-v0.1.1.zip` 内的xinput1_4.dll合并到游戏程序目录。描边核心及主/即时对话资源使用独立Mod包安装。用户已确认组合的主对白、即时对话和去阴影效果；当前文字视觉参数见核心仓库说明。
+退出游戏并备份已有xinput1_4.dll，再将 `sora1looseload-v0.1.0.zip` 内的xinput1_4.dll合并到游戏程序目录。描边核心及主/即时对话资源使用独立Mod包安装。用户已确认组合的主对白、即时对话和去阴影效果；当前文字视觉参数见核心仓库说明。
 
 恢复时退出游戏，用此次安装前的备份恢复xinput1_4.dll。其他资源按其原有Mod说明逐文件恢复。OptiScaler配置及DXGI入口由其自身安装维护。
 

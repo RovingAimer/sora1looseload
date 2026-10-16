@@ -1,16 +1,18 @@
 {
   "repository": "RovingAimer/sora1looseload",
-  "tag": "v0.1.1",
-  "name": "v0.1.1 · DialogueOutline 接入与路径缓冲修正",
-  "body": "保留loose资源覆盖、locale处理和7个XInput导出；在后台worker完成资源hook后初始化对白核心。语言路径输出缓冲使用516字节完整结构。\n\n安装ZIP只含xinput1_4.dll。退出游戏、备份原DLL后合并到游戏目录。完整MIT通知嵌入DLL。\n\n[项目文档](https://github.com/RovingAimer/sora1looseload/blob/v0.1.1/README_FORK.md) · [对白Mod](https://github.com/RovingAimer/sora1dialogueoutline/releases/tag/v0.3.0)",
+  "tag": "v0.1.0",
+  "name": "v0.1.0 · Mod 加载器",
+  "body": "《空之轨迹 the 1st》Mod 加载器，支持游戏目录中的松散资源 Mod，并可加载[对话透明背景与自适应描边 Mod](https://github.com/RovingAimer/sora1dialogueoutline/releases/tag/v0.1.0)。\n\n下载 `sora1looseload-v0.1.0.zip`，其中包含安装文件 `xinput1_4.dll`。\n\n安装：退出游戏，备份游戏目录中已有的 `xinput1_4.dll`，再将 ZIP 内的同名文件解压到 `sora_1st.exe` 所在目录。需要对白效果时，继续安装上方链接中的对白 Mod 主包。\n\n卸载：退出游戏，从备份恢复原来的 `xinput1_4.dll`。\n\n[支持版本、源码与完整文档](https://github.com/RovingAimer/sora1looseload/blob/v0.1.0/README_FORK.md)\n\n下载区的 `Source code` 是 GitHub 自动提供的源码归档，供开发者使用。",
   "assets": [
     {
-      "name": "sora1looseload-v0.1.1.zip",
+      "name": "sora1looseload-v0.1.0.zip",
       "blob_sha": "541d218984eaaa66dc7549d852849ec76d781880",
       "sha256": "284a9b8c0e3856036cf2f560c85653635b9e333c9527bed6156f815d7c0dce7b",
       "entries": [
         "xinput1_4.dll"
-      ]
+      ],
+      "previous_name": "sora1looseload-v0.1.1.zip",
+      "label": "Mod加载器"
     }
   ],
   "source_hashes_lf": {
@@ -39,5 +41,16 @@
   },
   "native_binary_sha256": "bffe52ead5a04f42978ec6b63feafe729d812974c11493b3cd5cada38910c486",
   "compiler": "MSVC 19.43.34809; Windows SDK 10.0.26100.0",
-  "validation": "User confirmed main dialogue and active voice; no offset shadow; 60% chosen by user; final startup checked locally"
+  "validation": "User confirmed main dialogue and active voice; no offset shadow; 60% chosen by user; final startup checked locally",
+  "replace_release": {
+    "id": 415253176,
+    "old_tag": "v0.1.1",
+    "old_commit": "f0db429966bf0f07e4be7b75649c23fb26776182"
+  },
+  "hide_releases": [
+    {
+      "id": 414762808,
+      "tag": "initial-dialogue-entry"
+    }
+  ]
 }
