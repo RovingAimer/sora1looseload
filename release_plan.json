@@ -1,0 +1,43 @@
+{
+  "repository": "RovingAimer/sora1looseload",
+  "tag": "v0.1.1",
+  "name": "v0.1.1 · DialogueOutline 接入与路径缓冲修正",
+  "body": "保留loose资源覆盖、locale处理和7个XInput导出；在后台worker完成资源hook后初始化对白核心。语言路径输出缓冲使用516字节完整结构。\n\n安装ZIP只含xinput1_4.dll。退出游戏、备份原DLL后合并到游戏目录。完整MIT通知嵌入DLL。\n\n[项目文档](https://github.com/RovingAimer/sora1looseload/blob/v0.1.1/README_FORK.md) · [对白Mod](https://github.com/RovingAimer/sora1dialogueoutline/releases/tag/v0.3.0)",
+  "assets": [
+    {
+      "name": "sora1looseload-v0.1.1.zip",
+      "blob_sha": "541d218984eaaa66dc7549d852849ec76d781880",
+      "sha256": "284a9b8c0e3856036cf2f560c85653635b9e333c9527bed6156f815d7c0dce7b",
+      "entries": [
+        "xinput1_4.dll"
+      ]
+    }
+  ],
+  "source_hashes_lf": {
+    "build.py": "252f499a5f682ae9318a407a66ad990b52eaf89c992c3dbb87461e066a6370ac",
+    "dllmain.cpp": "7393de29b61f4f0790c2c6cbd6b1fe499be621a0edb9903babf875d03ac6ba80",
+    "proxy.cpp": "93a0102eb19c283135b2bb59dad1764a6f62765156dee6835e4d2656961a40a1",
+    "pch.h": "ae8edb9ed44e84db3a64ff02bb4e053d661dc19474d8e284bda1c4d625744a0b",
+    "framework.h": "d7e3273aca06ee9a2b47ec7f96fbf06fd9301849ebf26ba54a441f8fcde36bd6",
+    "dialogue_outline_loader.h": "90deea55356a289a294a3f3e0e9056333a36f7f55af73387211f6a4db44992f4",
+    "LicenseNotice.h": "a34d1b1006518de421a19b65352806ecaecc6ba4a17b2dcebba774e86ce3bda2",
+    "LICENSE": "c0a814628df9a6883bb9e7f5ce8be1928e846f2d164ae7162b345056cc459ceb",
+    "external/detours/LICENSE.md": "b301808b732cfaa60df2b4b422d78cd97d2a15058b207e7e33f0535ba5170dd6",
+    "external/detours/src/creatwth.cpp": "57d1756707c93d4544d3346355d3c7fe900578a8ecb4b4f6835da55e71b02cd5",
+    "external/detours/src/detours.cpp": "4a82da4b285ddae0e7c825cfeaa798241b393207cd3374b556be4877f71f906b",
+    "external/detours/src/detours.h": "74b9d7a9f4f219a3ba1f08ee3f11ffece16f10ba413b12477955cca7449c4f60",
+    "external/detours/src/detver.h": "997d713d5b47d159f1736840b318ea426c76ed6f148014a5a9da78ebb4bd700c",
+    "external/detours/src/disasm.cpp": "f3f45aa576cf01a50428c19e21983c8679b5a3e51d105d1bfa774156ce101353",
+    "external/detours/src/disolarm.cpp": "20900e34f4afa968f4182fc9ae2d94d00ad15ddf1a17c53a034b18b38a9a4592",
+    "external/detours/src/disolarm64.cpp": "b93f39ba5691b9ffb98aae45c7fa5f5a6975a8fed001704ec97f7867a59998ce",
+    "external/detours/src/disolia64.cpp": "8ce93f70257c11a7b1015fac5ff801e7b72bbb9621f302a74f9d0bc1db49d334",
+    "external/detours/src/disolx64.cpp": "dcac45e9bf07b916e454e141f850856b76e3e0f7b502bd5dd56e18aa2250e020",
+    "external/detours/src/disolx86.cpp": "045d4b00029e810a9a156c1e17b33c2becdda1cc652a7cadfe61d9d1c66c81b6",
+    "external/detours/src/image.cpp": "a1d28d72279f8411bbf86390debc0f20003b9372fd9675749421210d3d30f623",
+    "external/detours/src/modules.cpp": "1950d936e27e847d69c132ee063752b5078593a98ab1841a2e10f33d8bbb4567",
+    "external/detours/src/uimports.cpp": "18f86c93d2c2d8feb46ddfb500027ce959a542b824c1d70cf7671227b8c70176"
+  },
+  "native_binary_sha256": "bffe52ead5a04f42978ec6b63feafe729d812974c11493b3cd5cada38910c486",
+  "compiler": "MSVC 19.43.34809; Windows SDK 10.0.26100.0",
+  "validation": "User confirmed main dialogue and active voice; no offset shadow; 60% chosen by user; final startup checked locally"
+}

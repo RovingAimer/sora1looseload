@@ -1,26 +1,16 @@
-# sora1looseload — DialogueOutline integration fork
+# sora1looseload — DialogueOutline integration
 
-本 fork 增加独立描边模块的固定接入点，保留原加载器功能与 MIT 协议。具体差异、构建、安装和未实机状态见 [README_FORK.md](README_FORK.md)。原版项目：[Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload)；描边 Mod：[sora1dialogueoutline](https://github.com/RovingAimer/sora1dialogueoutline)。
+《空之轨迹 the 1st》loose资源加载器与DialogueOutline接入扩展，基于[Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload)。保留上游历史、MIT版权、语言路径处理和7个XInput导出；后台worker初始化资源hook后接入独立描边核心。
 
----
+当前语言路径缓冲使用游戏要求的0x204字节容量。安装包只提供xinput1_4.dll，配合[对白Mod](https://github.com/RovingAimer/sora1dialogueoutline)的主包和可选即时对话包使用。
 
-This project uses submodules, so make sure to clone it with the `--recursive` flag:
+- [方案、构建、安装及恢复](README_FORK.md)
+- [语言路径输出结构](TLS_BUFFER_FIX.md)
+- [MIT许可证](LICENSE)
+- [Microsoft Detours许可证](external/detours/LICENSE.md)
 
-```bash
-git clone --recursive https://github.com/Hinkiii/sora1looseload.git
+```powershell
+git clone --recursive https://github.com/RovingAimer/sora1looseload.git
+cd sora1looseload
+python build.py
 ```
-
-I suggest building with Release, but either works.
-
-Put xinput1_4.dll into game folder
-
-Will log asset requests that the game makes, and gives the dir it'd load from when not in the cache yet (first load)
-
-Will log strings the game has internally with support for the Japanese character set
-
-
-For example with this dll you could put
-
-`Trails in the Sky 1st Chapter\asset\dx11\image\st_c5000.dds` to overrride estelles camp sprite
-
-`Trails in the Sky 1st Chapter\script\scena\system.dat` to override system scene script

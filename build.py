@@ -65,7 +65,9 @@ def main():
     if not (detours / 'detours.cpp').is_file():
         raise RuntimeError('Missing Detours source: clone with --recursive or use the complete source archive')
     names = ['detours', 'modules', 'disasm', 'image', 'creatwth', 'disolx86', 'disolx64', 'disolia64', 'disolarm', 'disolarm64']
-    inputs = [ROOT / name for name in ('build.py', 'dllmain.cpp', 'proxy.cpp', 'pch.h', 'framework.h', 'dialogue_outline_loader.h')]
+    inputs = [ROOT / name for name in ('build.py', 'dllmain.cpp', 'proxy.cpp', 'pch.h', 'framework.h',
+                                     'dialogue_outline_loader.h', 'LicenseNotice.h', 'LICENSE',
+                                     'external/detours/LICENSE.md')]
     inputs += sorted(path for path in detours.iterdir() if path.suffix in ('.h', '.cpp'))
     sources = {path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs}
     environment = compiler_environment()

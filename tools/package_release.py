@@ -8,6 +8,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'build/packages'
+VERSION = '0.1.1'
 
 
 def digest(data):
@@ -36,34 +37,41 @@ def main():
     dll = (ROOT / 'build/xinput1_4.dll').read_bytes()
     if digest(dll) != report['dll_sha256']:
         raise ValueError('Loader differs from its build report')
+    expected_inputs = {name: ROOT / name for name in ('build.py', 'dllmain.cpp', 'proxy.cpp', 'pch.h',
+                       'framework.h', 'dialogue_outline_loader.h', 'LicenseNotice.h', 'LICENSE',
+                       'external/detours/LICENSE.md')}
+    expected_inputs.update({path.relative_to(ROOT).as_posix(): path
+                            for path in (ROOT / 'external/detours/src').iterdir()
+                            if path.suffix in ('.h', '.cpp')})
+    if set(report['sources']) != set(expected_inputs):
+        raise ValueError('Build input set differs; rebuild before packaging')
     for relative, expected in report['sources'].items():
-        if digest((ROOT / relative).read_bytes()) != expected:
+        if digest(expected_inputs[relative].read_bytes()) != expected:
             raise ValueError('Source changed after build: ' + relative)
     sources = {path.name: path.read_bytes() for path in ROOT.iterdir() if path.is_file()}
-    for folder in ('.github', 'tools', 'external/detours/src'):
+    for folder in ('.github', 'tools', 'external/detours'):
         for path in sorted((ROOT / folder).rglob('*')):
-            if path.is_file() and '__pycache__' not in path.parts:
+            relative_parts = path.relative_to(ROOT / folder).parts
+            if path.is_file() and not any(part in {'.git', '__pycache__', 'build'}
+                                           or part.startswith(('bin.', 'lib.', 'obj.'))
+                                           for part in relative_parts):
                 sources[path.relative_to(ROOT).as_posix()] = path.read_bytes()
-    for name in ('LICENSE', 'LICENSE.md', 'README.md', 'CREDITS.md', 'Makefile', 'system.mak'):
-        path = ROOT / 'external/detours' / name
-        sources[path.relative_to(ROOT).as_posix()] = path.read_bytes()
-    forbidden = {'.dll', '.exe', '.obj', '.lib', '.pdb', '.pac', '.dds', '.lay'}
+    forbidden = {'.dll', '.exe', '.obj', '.lib', '.pdb', '.pac', '.dds', '.lay', '.asi'}
     if any(Path(name).suffix.lower() in forbidden for name in sources):
         raise ValueError('Source distribution contains native outputs or game resources')
     source_hashes = {name: digest(data) for name, data in sorted(sources.items())}
     sources['SOURCE_MANIFEST.json'] = (json.dumps(dict(source_git=report['source_git'],
         upstream_commit=report['upstream_commit'], detours_commit=report['detours_commit'],
         files=source_hashes), indent=2) + '\n').encode('utf-8')
-    binary = {'xinput1_4.dll': dll, 'report.json': report_bytes,
-              'LICENSE': sources['LICENSE'], 'README_FORK.md': sources['README_FORK.md']}
-    for name in ('LICENSE', 'LICENSE.md', 'CREDITS.md'):
-        relative = 'external/detours/' + name
-        binary[relative] = sources[relative]
+    binary = {'xinput1_4.dll': dll}
     OUTPUT.mkdir(parents=True, exist_ok=True)
-    artifacts = [archive('sora1looseload_dialogue-entry_initial-candidate.zip', binary),
-                 archive('sora1looseload_dialogue-entry_source_initial-candidate.zip', sources)]
-    manifest = dict(repository=report['fork_repository'], source_git=report['source_git'],
-                    dll_sha256=report['dll_sha256'], game_runtime_verified=False, artifacts=artifacts)
+    artifacts = [archive(f'sora1looseload-v{VERSION}.zip', binary),
+                 archive(f'sora1looseload-v{VERSION}-source.zip', sources)]
+    manifest = dict(version=VERSION, repository=report['fork_repository'], source_git=report['source_git'],
+                    dll_sha256=report['dll_sha256'], game_runtime_verified=False, artifacts=artifacts,
+                    files=[dict(path=name, bytes=len(data), sha256=digest(data))
+                           for name, data in sorted(binary.items())],
+                    native_build_report_sha256=digest(report_bytes), native_build_report=report)
     (OUTPUT / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(manifest, indent=2))
 

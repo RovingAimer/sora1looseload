@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "LicenseNotice.h"
 #include "dialogue_outline_loader.h"
 #include "detours.h"
 #include <windows.h>
@@ -82,7 +83,8 @@ __int64 __fastcall InitialFileCheck(__int64 a1, const char* a2, unsigned int a3,
         return oInitialFileCheck(a1, a2, a3, a4, a5);
 
     static thread_local char safeFullPath[MAX_PATH];
-    static thread_local char localizedPath[MAX_PATH];
+    // Game LocaleHandler writes a 0x200-byte path plus a DWORD length at +0x200.
+    static thread_local char localizedPath[0x204];
     const char* finalPath = a2;
 
     size_t gameDirLen = 0;

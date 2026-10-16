@@ -1,31 +1,32 @@
-# DialogueOutline 接入扩展
+# sora1looseload DialogueOutline 接入版
 
-这是 [Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload) 的 fork，基于上游提交 `04e898e369e3019d5aa2cb13a7209de39c643a4a`。原 MIT 许可证和上游历史保留；新增接入及构建代码也采用 MIT，Copyright (c) 2026 DialogueOutline contributors。Detours 子模块固定为 `9764cebcb1a75940e68fa83d6730ffaf0f669401`，保留 Microsoft MIT 许可证。
+本项目基于 [Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload)，保留上游历史和 MIT 版权。它负责游戏 loose 资源覆盖、语言路径处理、XInput 转发，并在后台初始化完成后接入 [DialogueOutline](https://github.com/RovingAimer/sora1dialogueoutline) 核心。
 
-本仓库维护加载器；独立描边 Mod 位于 [sora1dialogueoutline](https://github.com/RovingAimer/sora1dialogueoutline)。这份 fork 尚未实机验证，上游原版没有合入本改动。
+## 方案与实现
 
-## 改动范围
+加载器复用现有后台 worker，在资源 Detours 事务提交成功后，从 EXE 目录的 `mods/DialogueOutline/DialogueOutline.dll` 加载核心并显式调用 `SoraDialogueInitialize()`。这一时机让字形 hook 的初始化在 loader lock 外完成，也沿用现有玩家的 loose 目录安装方式。
 
-原有资源读取、语言处理与 XInput 转发代码保留。`dllmain.cpp` 增加一个头文件引用，并在资源 Detours 事务成功提交后调用固定模块加载函数。该函数从游戏程序目录读取 `mods/DialogueOutline/DialogueOutline.dll`，然后在 DllMain 和 loader lock 之外显式调用 `SoraDialogueInitialize()`。
+语言路径输出缓冲为 `0x204` 字节，容纳游戏的512字节路径和DWORD长度字段，详见 [TLS_BUFFER_FIX.md](TLS_BUFFER_FIX.md)。原来的7个XInput导出与ordinal保持，资源读取和locale处理继续由本加载器负责。Detours源码锁定 `9764cebcb1a75940e68fa83d6730ffaf0f669401`。
 
-这是一个固定的描边模块接入点，不是通用插件框架。它不扫描其他 DLL，不占用 D3D/DXGI 入口，也不更改进程全局 DLL 搜索路径。未安装描边模块时跳过；路径错误、加载失败或核心初始化失败记录在原 `console.log`，不撤销已成功建立的资源读取 detours。七个原 XInput 导出及序号保持。
+核心缺失时跳过接入；接入结果写入原console.log。`0x14F`包含此核心hook active状态，字形的描边颜色、粗细和专属标记由核心维护。
 
 ## 构建
+
+Windows x64、Python3、VS2022 C++工具和Windows SDK：
 
 ```powershell
 git clone --recursive https://github.com/RovingAimer/sora1looseload.git
 cd sora1looseload
 python build.py
+python tools/package_release.py
 ```
 
-需要 Windows x64、Python 3 和 Visual Studio C++ Build Tools（MSVC、MASM/Windows SDK）。也可以使用原 Visual Studio 工程。完整源码压缩包已附带 Detours 的所需源码，解压后可直接运行构建脚本，无须 Git 子模块下载。
-
-脚本只写本工作副本的 `build/`，不安装、不加载生成的 DLL，也不启动游戏。输出 `build/xinput1_4.dll`、`build/report.json`。报告记录源码及依赖版本、源码校验、DLL 校验和 XInput 导出检查。运行 `python tools/package_release.py` 可生成独立的加载器候选包和完整源码包。
+默认loader和Detours均使用 `/O2 /MT`。产物为 `build/xinput1_4.dll`；`build/report.json`记录源文件hash、源提交、依赖版本和7个导出检查。完整源码包包含Detours全部所需源码与许可证，解包后可直接构建。
 
 ## 安装与恢复
 
-选择本接入方式时，用户需要先备份当前游戏根目录的 `xinput1_4.dll`，再明确选择将其替换为本 fork 的构建产物。之后按描边 Mod 的说明合并其目录。无需 `SoraLooseLoader.dll`，也无需其他 DLL 代理。现用原版 DLL 不会因为复制 Mod 文件就自动获得接入能力。
+退出游戏并备份已有xinput1_4.dll，再将 `sora1looseload-v0.1.1.zip` 内的xinput1_4.dll合并到游戏程序目录。描边核心及主/即时对话资源使用独立Mod包安装。用户已确认组合的主对白、即时对话和去阴影效果；当前文字视觉参数见核心仓库说明。
 
-不要同时启用描边 Mod 的 ASI 入口，以免两份核心争用同一位置。核心接入正常时日志会出现 `[DialogueOutline]` 初始化状态；它只能证明接入状态，画面、稳定性与已有 Mod 是否兼容仍需实机检查。卸载本 fork 时，退出游戏后用自己的备份恢复原加载器即可。
+恢复时退出游戏，用此次安装前的备份恢复xinput1_4.dll。其他资源按其原有Mod说明逐文件恢复。OptiScaler配置及DXGI入口由其自身安装维护。
 
-本仓库不修改磁盘游戏 EXE，不提供游戏或 Mod 资源，不提供自动安装脚本。描边效果、文字颜色适配与具体游戏版本检查由独立 Mod 核心负责。
+安装ZIP只包含xinput1_4.dll。源码、构建记录与文档放在GitHub。原Hinkiii与Microsoft Detours完整MIT许可通知已嵌入DLL的只读数据，源码保留原LICENSE及external/detours/LICENSE.md。
