@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "dialogue_outline_loader.h"
 #include "detours.h"
 #include <windows.h>
 #include <thread>
@@ -298,9 +299,13 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID) {
             DetourAttach((void**)&oInitialFileCheck, InitialFileCheck);
             DetourAttach((void**)&oDebugLogger, DebugLogger);
             DetourAttach((void**)&oLocaleHandler, hkLocaleHandler);
-            DetourTransactionCommit();
-
+            const LONG result = DetourTransactionCommit();
+            if (result != NO_ERROR) {
+                Log("Detours commit failed (%ld); DialogueOutline was not loaded.", result);
+                return;
+            }
             Log("All detours attached successfully.");
+            LoadDialogueOutline(Log);
             }).detach();
     }
     return TRUE;

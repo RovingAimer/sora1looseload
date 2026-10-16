@@ -1,3 +1,9 @@
+# sora1looseload — DialogueOutline integration fork
+
+本 fork 增加独立描边模块的固定接入点，保留原加载器功能与 MIT 协议。具体差异、构建、安装和未实机状态见 [README_FORK.md](README_FORK.md)。原版项目：[Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload)；描边 Mod：[sora1dialogueoutline](https://github.com/RovingAimer/sora1dialogueoutline)。
+
+---
+
 This project uses submodules, so make sure to clone it with the `--recursive` flag:
 
 ```bash

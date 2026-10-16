@@ -1,0 +1,2 @@
+# Keep the upstream text convention and avoid unrelated CRLF-only diffs.
+* text=auto eol=lf

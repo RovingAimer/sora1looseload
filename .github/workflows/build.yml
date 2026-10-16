@@ -1,0 +1,28 @@
+name: Build loader
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build the loader fork
+        run: python build.py
+      - name: Package source and loader separately
+        run: python tools/package_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sora1looseload-${{ github.sha }}
+          path: |
+            build/packages/*.zip
+            build/packages/manifest.json
+          if-no-files-found: error
