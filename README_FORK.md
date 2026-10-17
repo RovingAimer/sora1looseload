@@ -1,45 +1,25 @@
-# sora1looseload DialogueOutline 接入版
+# sora1looseload：方案与当前实现
 
-本仓库维护《空之轨迹 the 1st》的 loose 资源加载器，并在现有资源加载流程完成后接入独立 DialogueOutline 核心。它基于 [Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload/tree/04e898e369e3019d5aa2cb13a7209de39c643a4a) 的提交 `04e898e369e3019d5aa2cb13a7209de39c643a4a`，保留原有资源读取、语言路径处理和七个 XInput 导出。
+本仓库维护《空之轨迹 the 1st》的松散资源加载器，并在启动时发现 `mods` 下声明的 DLL Mod。统一使用现有 `xinput1_4.dll` 入口，便于独立模块按目录安装；增加模块时可沿用该加载器及模块声明接口。
 
-## 当前方案
+上游为 [Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload/tree/04e898e369e3019d5aa2cb13a7209de39c643a4a)，基于提交 `04e898e369e3019d5aa2cb13a7209de39c643a4a`。仓库保留原资源读取、locale 路径处理及七个 XInput 导出，并接入 Microsoft Detours。
 
-加载器复用现有后台 worker。在资源 Detours 事务成功提交后，它从游戏目录加载 `mods/DialogueOutline/DialogueOutline.dll`，并在 loader lock 外显式调用 `SoraDialogueInitialize()`。这沿用 loose 资源 Mod 的目录结构，并让核心在字形 hook 初始化前完成检查。
+[通用加载器 v0.2.0](https://github.com/RovingAimer/sora1looseload/releases/tag/v0.2.0) 已通过用户实机验收，字幕描边与相机反虚化均正常。模块接口见 [MODULES.md](MODULES.md)，安装及完整源码附件见 [README.md](README.md)。
 
-加载器负责松散资源、locale 路径和 XInput 转发；DialogueOutline 核心负责对白节点识别、描边几何及颜色选择。核心缺失时，加载器继续运行资源加载功能。
+## 启动与资源加载
 
-描边核心发布于 [v0.1.0](https://github.com/RovingAimer/sora1dialogueoutline/releases/tag/v0.1.0)。必装主包处理主对白正文和姓名。可选 active-voice 包处理带头像的即时对白横条；其 `active_voice.lay` 使用横条资源 `active_voice`，头像由独立资源节点 `avfc5000` 提供。
+`DllMain` 创建启动 worker。worker 首先定位 `InitialFileCheck` 与 `LocaleHandler`：前者搜索 GLB 签名，未找到时搜索 CLE 签名；后者使用固定签名。两者找到后提交 Detours 事务。当前资源接入不依赖 `DebugLogger`。
 
-## 支持边界
+资源 hook 尝试结束后，无论成功与否都会继续发现 `mods` 下的模块。资源签名缺失或 Detours 事务失败记录为 `[Resources]` 日志；每个模块的声明、预检、映射和初始化返回值分别记录为 `[Mods]` 日志。资源接入不执行 EXE SHA256 白名单检查。
 
-加载器按程序代码签名定位资源 hook。当前 `InitialFileCheck` 搜索 GLB 签名，未找到时再搜索 CLE 签名；同时要求 `DebugLogger` 与 `LocaleHandler` 签名均可找到。三个目标找到后，加载器提交 Detours 事务。加载器本身不执行 EXE SHA256 白名单检查。
+调用原始 `LocaleHandler` 时，`InitialFileCheck` 使用每线程 `0x204` 字节输出对象：`0x200` 字节字符区及 `0x4` 字节长度字段。每个游戏线程有独立缓冲区；当前 locale 下找到 loose 文件时将该路径交给原始 `InitialFileCheck`。
 
-对白核心独立校验游戏 EXE，只接受对白 Mod v0.1.0 安装说明列出的 SHA256：`9585d3d993874d65156aba633c00b8a25faab3afde8953a8a183c80fb8f657ac`。请以[核心支持版本说明](https://github.com/RovingAimer/sora1dialogueoutline/blob/main/INSTALL.md)为准。资源 hook 签名和核心 EXE 校验是两个独立检查。
+加载器保留七个 XInput 导出与原序号。加载器自身处理 loose 资源和 XInput 转发；独立 Mod 由模块声明指定 DLL 与初始化入口。
 
-核心成功安装 hook 时，加载器日志会显示 `[DialogueOutline] Initialization status: 0x0000014F (hook active)`。
+## 依赖与许可
 
-## 构建
+上游代码采用 MIT，原版权为 Copyright (c) 2025 Hinkiii。集成及构建改动采用 MIT，Copyright (c) 2026 DialogueOutline contributors 与 SoraMod contributors。Detours 固定在提交 `9764cebcb1a75940e68fa83d6730ffaf0f669401`，采用 Microsoft MIT 许可。
 
-需要 Windows x64、Python 3、Visual Studio 2022 C++ Build Tools（MSVC x64）和 Windows SDK。Detours 作为固定 Git 子模块参与构建。GitHub 自动生成的 Source code ZIP 不含子模块内容；完整构建请递归克隆 v0.1.0 源码：
+仓库的 [LICENSE](LICENSE) 和 [Detours LICENSE](external/detours/LICENSE.md) 保存完整许可。构建会检查 DLL 中包含两份许可文本及版权标记。游戏资源许可由各自权利人规定。
 
-```powershell
-git clone --recursive https://github.com/RovingAimer/sora1looseload.git
-cd sora1looseload
-git checkout v0.1.0
-git submodule update --init --recursive
-python build.py
-```
-
-脚本构建 `build/xinput1_4.dll`，并写入 `build/report.json`，记录源码提交、依赖版本、导出检查和 DLL SHA256。Detours 固定在 `9764cebcb1a75940e68fa83d6730ffaf0f669401`，静态链接到加载器。七个 XInput 导出与原序号保持不变。
-
-## 来源与许可证
-
-上游 [Hinkiii/sora1looseload](https://github.com/Hinkiii/sora1looseload/tree/04e898e369e3019d5aa2cb13a7209de39c643a4a) 的原始代码采用 MIT，Copyright (c) 2025 Hinkiii。加载器接入和构建改动采用 MIT，Copyright (c) 2026 DialogueOutline contributors。
-
-Microsoft Detours 采用 Microsoft MIT 许可证，Copyright (c) Microsoft Corporation；其源码由上述固定提交锁定。仓库中的 [LICENSE](https://github.com/RovingAimer/sora1looseload/blob/main/LICENSE) 和 [Detours LICENSE](https://github.com/microsoft/Detours/blob/9764cebcb1a75940e68fa83d6730ffaf0f669401/LICENSE.md) 保留完整许可文本。加载器 DLL 也嵌入对应版权和许可通知。游戏资源及对白 Mod 资源的许可由各自权利人规定，详见[资源来源与授权](https://github.com/RovingAimer/sora1dialogueoutline/blob/main/THIRD_PARTY.md)。
-
-## 安装与卸载
-
-加载器 v0.1.0 发布 ZIP 只含 `xinput1_4.dll`。退出游戏并备份游戏目录中原有的同名文件，再将 ZIP 解压到 `sora_1st.exe` 所在目录。需要对白效果时，继续安装对白 Mod 主包；带头像的即时对白横条按需安装可选 active-voice 包。
-
-卸载时退出游戏，用安装前备份恢复原来的 `xinput1_4.dll`。对白 Mod 的布局和贴图文件按其[安装说明](https://github.com/RovingAimer/sora1dialogueoutline/blob/main/INSTALL.md)逐个恢复。
+完整的模块安装接口见 [MODULES.md](MODULES.md)，环境和命令见 [BUILDING.md](BUILDING.md)。

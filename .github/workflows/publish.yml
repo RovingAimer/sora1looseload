@@ -1,38 +1,55 @@
-name: Publish verified installation files
+name: Publish accepted loader packages
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['release_plan.json', '.github/workflows/publish.yml']
+    inputs:
+      build_run_id:
+        description: Successful Build loader run containing the exact accepted packages
+        required: true
+        type: string
+      final_acceptance:
+        description: These packages passed final user acceptance and are authorized for publication
+        required: true
+        default: false
+        type: boolean
 
 permissions:
+  actions: read
   contents: write
 
 jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Build native source
-        run: python build.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: native-build-${{ github.sha }}
-          path: |
-            build/*.dll
-            build/*report.json
-          if-no-files-found: error
   publish:
-    needs: build
+    if: ${{ inputs.final_acceptance }}
     runs-on: ubuntu-latest
     steps:
+      - name: Select the accepted build artifact
+        id: build
+        uses: actions/github-script@v7
+        env:
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        with:
+          script: |
+            const runId = process.env.BUILD_RUN_ID;
+            if (!/^[0-9]+$/.test(runId)) throw new Error('Expected a build run ID');
+            const { data: run } = await github.rest.actions.getWorkflowRun({
+              ...context.repo, run_id: Number(runId)
+            });
+            if (run.path !== '.github/workflows/build.yml' || run.status !== 'completed' ||
+                run.conclusion !== 'success' || run.head_repository.full_name !== process.env.GITHUB_REPOSITORY) {
+              throw new Error('Select a successful Build loader run from this repository');
+            }
+            core.setOutput('source_sha', run.head_sha);
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-      - name: Verify source and publish installation files
+          ref: ${{ steps.build.outputs.source_sha }}
+      - name: Download the same accepted packages without rebuilding
+        uses: actions/download-artifact@v4
+        with:
+          name: sora1looseload-${{ steps.build.outputs.source_sha }}
+          path: build/packages
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify and publish both prepared attachments
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python tools/publish_release.py
+        run: python tools/publish_release.py --publish

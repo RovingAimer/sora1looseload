@@ -1,44 +1,13 @@
 {
   "repository": "RovingAimer/sora1looseload",
-  "tag": "v0.1.0",
-  "name": "v0.1.0 · Mod 加载器",
-  "body": "《空之轨迹 the 1st》Mod 加载器，支持游戏目录中的松散资源 Mod，并可加载[对话透明背景与自适应描边 Mod](https://github.com/RovingAimer/sora1dialogueoutline/releases/tag/v0.1.0)。\n\n下载 `sora1looseload-v0.1.0.zip`，其中包含安装文件 `xinput1_4.dll`。\n\n安装：退出游戏，备份游戏目录中已有的 `xinput1_4.dll`，再将 ZIP 内的同名文件解压到 `sora_1st.exe` 所在目录。需要对白效果时，继续安装上方链接中的对白 Mod 主包。\n\n卸载：退出游戏，从备份恢复原来的 `xinput1_4.dll`。\n\n[支持版本、源码与完整文档](https://github.com/RovingAimer/sora1looseload/blob/main/README_FORK.md)\n\n下载区的 `Source code` 是 GitHub 自动提供的源码归档，供开发者使用。",
-  "assets": [
-    {
-      "name": "sora1looseload-v0.1.0.zip",
-      "blob_sha": "541d218984eaaa66dc7549d852849ec76d781880",
-      "sha256": "284a9b8c0e3856036cf2f560c85653635b9e333c9527bed6156f815d7c0dce7b",
-      "entries": [
-        "xinput1_4.dll"
-      ],
-      "label": "Mod加载器"
-    }
-  ],
-  "source_hashes_lf": {
-    "build.py": "252f499a5f682ae9318a407a66ad990b52eaf89c992c3dbb87461e066a6370ac",
-    "dllmain.cpp": "7393de29b61f4f0790c2c6cbd6b1fe499be621a0edb9903babf875d03ac6ba80",
-    "proxy.cpp": "93a0102eb19c283135b2bb59dad1764a6f62765156dee6835e4d2656961a40a1",
-    "pch.h": "ae8edb9ed44e84db3a64ff02bb4e053d661dc19474d8e284bda1c4d625744a0b",
-    "framework.h": "d7e3273aca06ee9a2b47ec7f96fbf06fd9301849ebf26ba54a441f8fcde36bd6",
-    "dialogue_outline_loader.h": "90deea55356a289a294a3f3e0e9056333a36f7f55af73387211f6a4db44992f4",
-    "LicenseNotice.h": "a34d1b1006518de421a19b65352806ecaecc6ba4a17b2dcebba774e86ce3bda2",
-    "LICENSE": "c0a814628df9a6883bb9e7f5ce8be1928e846f2d164ae7162b345056cc459ceb",
-    "external/detours/LICENSE.md": "b301808b732cfaa60df2b4b422d78cd97d2a15058b207e7e33f0535ba5170dd6",
-    "external/detours/src/creatwth.cpp": "57d1756707c93d4544d3346355d3c7fe900578a8ecb4b4f6835da55e71b02cd5",
-    "external/detours/src/detours.cpp": "4a82da4b285ddae0e7c825cfeaa798241b393207cd3374b556be4877f71f906b",
-    "external/detours/src/detours.h": "74b9d7a9f4f219a3ba1f08ee3f11ffece16f10ba413b12477955cca7449c4f60",
-    "external/detours/src/detver.h": "997d713d5b47d159f1736840b318ea426c76ed6f148014a5a9da78ebb4bd700c",
-    "external/detours/src/disasm.cpp": "f3f45aa576cf01a50428c19e21983c8679b5a3e51d105d1bfa774156ce101353",
-    "external/detours/src/disolarm.cpp": "20900e34f4afa968f4182fc9ae2d94d00ad15ddf1a17c53a034b18b38a9a4592",
-    "external/detours/src/disolarm64.cpp": "b93f39ba5691b9ffb98aae45c7fa5f5a6975a8fed001704ec97f7867a59998ce",
-    "external/detours/src/disolia64.cpp": "8ce93f70257c11a7b1015fac5ff801e7b72bbb9621f302a74f9d0bc1db49d334",
-    "external/detours/src/disolx64.cpp": "dcac45e9bf07b916e454e141f850856b76e3e0f7b502bd5dd56e18aa2250e020",
-    "external/detours/src/disolx86.cpp": "045d4b00029e810a9a156c1e17b33c2becdda1cc652a7cadfe61d9d1c66c81b6",
-    "external/detours/src/image.cpp": "a1d28d72279f8411bbf86390debc0f20003b9372fd9675749421210d3d30f623",
-    "external/detours/src/modules.cpp": "1950d936e27e847d69c132ee063752b5078593a98ab1841a2e10f33d8bbb4567",
-    "external/detours/src/uimports.cpp": "18f86c93d2c2d8feb46ddfb500027ce959a542b824c1d70cf7671227b8c70176"
-  },
-  "native_binary_sha256": "bffe52ead5a04f42978ec6b63feafe729d812974c11493b3cd5cada38910c486",
-  "compiler": "MSVC 19.43.34809; Windows SDK 10.0.26100.0",
-  "release_source_commit": "e8e74f154409f8bd29f0627c7341a8f22bb90a05"
+  "version": "0.2.0",
+  "name": "Mod加载器",
+  "body": "《空之轨迹 the 1st》Mod加载器，支持游戏目录中的松散资源和独立 DLL Mod。\n\n统一发现和加载模块，以后安装符合接口的新 Mod 只需合并模块目录，无需再次替换加载器。\n\n附件用途：\n\n- `sora1looseload-v{version}.zip`：加载器 `xinput1_4.dll` 和现有 DialogueOutline 模块的声明文件 `mods/DialogueOutline/sora_mod.ini`。字幕核心及资源由 DialogueOutline 安装包提供。\n- `sora1looseload-v{version}-source.zip`：完整源码、固定版本 Detours、构建方法和依赖许可，供查验或自行编译。GitHub 自动生成的源码归档不包含 Detours 子模块。\n\n安装：退出游戏，备份已有 `xinput1_4.dll` 和将覆盖的模块声明，将安装包解压到 `sora_1st.exe` 所在目录并保留目录层级。卸载时退出游戏，恢复备份；安装前不存在的模块文件可移除。\n\nDLL 会在游戏进程内以当前玩家账户权限运行代码，可能影响游戏稳定性、文件和数据。只使用可信来源。完整源码可供查验和自行编译；附件 SHA256 可与发布清单核对。\n\n[支持版本、源码和完整文档](https://github.com/RovingAimer/sora1looseload/blob/main/README.md)",
+  "runtime_acceptance": {
+    "date": "2026-10-17",
+    "user_statement": "测试正常，字幕描边和相机反虚化都没问题，可以发布加载器0.2.0和相机反虚化0.1.0了",
+    "game_runtime_verified": true,
+    "exe_sha256": "9585d3d993874d65156aba633c00b8a25faab3afde8953a8a183c80fb8f657ac",
+    "scope": "用户确认字幕描边和相机反虚化正常；未扩展为其他场景或版本兼容承诺。"
+  }
 }

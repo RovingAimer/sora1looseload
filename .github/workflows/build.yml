@@ -17,3 +17,4 @@ jobs:
           name: sora1looseload-${{ github.sha }}
           path: build/packages/*
           if-no-files-found: error
+          retention-days: 90

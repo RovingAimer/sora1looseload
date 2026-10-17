@@ -1,11 +1,15 @@
-"""Publish installation assets and first-release notes from the reviewed plan."""
-# Copyright (c) 2026 DialogueOutline contributors. SPDX-License-Identifier: MIT
-import base64
-import hashlib
+"""Validate and preview prepared packages; network publication requires --publish."""
+# Copyright (c) 2026 DialogueOutline contributors
+# Copyright (c) 2026 SoraMod contributors
+# SPDX-License-Identifier: MIT
+import argparse
+from hashlib import sha256
 import io
 import json
 import os
 from pathlib import Path
+import re
+import subprocess
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -14,13 +18,76 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main():
-    plan = json.loads((ROOT / 'release_plan.json').read_text(encoding='utf-8'))
-    repository = os.environ['GITHUB_REPOSITORY']
+def digest(data):
+    return sha256(data).hexdigest()
+
+
+def validate_packages(folder, plan):
+    manifest = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
+    if manifest['version'] != plan['version'] or manifest['repository'] != plan['repository']:
+        raise ValueError('Packages differ from the current release plan')
+    source_git = manifest['source_git']
+    commit = source_git['commit']
+    if not re.fullmatch(r'[0-9a-f]{40}', commit or '') or source_git['dirty'] is not False:
+        raise ValueError('Packages must identify a committed clean source snapshot')
+    if (ROOT / '.git').exists():
+        current = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+        if current != commit:
+            raise ValueError('Check out the prepared package source commit before publishing')
+    version = plan['version']
+    expected = {'installation': f'sora1looseload-v{version}.zip',
+                'source': f'sora1looseload-v{version}-source.zip'}
+    if len(manifest['artifacts']) != 2 or {asset['kind']: asset['file'] for asset in manifest['artifacts']} != expected:
+        raise ValueError('Expected exactly the current installation and complete source ZIPs')
+    assets, contents = [], {}
+    for asset in manifest['artifacts']:
+        data = (folder / asset['file']).read_bytes()
+        if digest(data) != asset['sha256'] or len(data) != asset['bytes']:
+            raise ValueError('Prepared ZIP hash or size differs: ' + asset['file'])
+        with ZipFile(io.BytesIO(data)) as zipped:
+            members = asset['members']
+            if zipped.testzip() is not None or sorted(zipped.namelist()) != sorted(item['path'] for item in members):
+                raise ValueError('Prepared ZIP members differ: ' + asset['file'])
+            files = {name: zipped.read(name) for name in zipped.namelist()}
+            for member in members:
+                payload = files[member['path']]
+                if digest(payload) != member['sha256'] or len(payload) != member['bytes']:
+                    raise ValueError('ZIP member differs: ' + member['path'])
+        assets.append((asset, data))
+        contents[asset['kind']] = files
+    installation, sources = contents['installation'], contents['source']
+    if set(installation) != {'xinput1_4.dll', 'mods/DialogueOutline/sora_mod.ini'}:
+        raise ValueError('Installation ZIP must contain only the loader and subtitle declaration')
+    if digest(installation['xinput1_4.dll']) != manifest['dll_sha256']:
+        raise ValueError('Installation DLL differs from manifest')
+    if installation['mods/DialogueOutline/sora_mod.ini'] != sources['mods/DialogueOutline/sora_mod.ini']:
+        raise ValueError('Installed module declaration differs from the source snapshot')
+    snapshot = json.loads(sources['SOURCE_MANIFEST.json'])
+    if snapshot['source_git'] != source_git or set(snapshot['files']) != set(sources) - {'SOURCE_MANIFEST.json'}:
+        raise ValueError('Complete source snapshot differs from manifest')
+    for name, expected_hash in snapshot['files'].items():
+        if digest(sources[name]) != expected_hash:
+            raise ValueError('Source snapshot member differs: ' + name)
+    if json.loads(sources['release_plan.json']) != plan:
+        raise ValueError('Release plan differs from the prepared source snapshot')
+    report = manifest['native_build_report']
+    if report['dll_sha256'] != manifest['dll_sha256'] or snapshot['detours_commit'] != report['detours_commit']:
+        raise ValueError('Build report differs from prepared packages')
+    report_bytes = (folder / 'build-report.json').read_bytes()
+    if digest(report_bytes) != manifest['native_build_report_sha256'] or json.loads(report_bytes) != report:
+        raise ValueError('Native build report hash differs')
+    for name, expected_hash in report['sources'].items():
+        if name not in sources or digest(sources[name]) != expected_hash:
+            raise ValueError('Source archive does not cover the compiled input: ' + name)
+    return manifest, assets
+
+
+def publish(plan, manifest, assets, body):
+    repository = os.environ.get('GITHUB_REPOSITORY', plan['repository'])
     if repository != plan['repository']:
         raise ValueError('Repository differs from release plan')
     api = 'https://api.github.com/repos/' + repository
-    token = os.environ['GH_TOKEN']
+    token = os.environ.get('GH_TOKEN') or os.environ['GITHUB_TOKEN']
 
     def request(path, method='GET', payload=None, binary=None):
         url = path if path.startswith('https://') else api + path
@@ -30,7 +97,7 @@ def main():
         if data is not None:
             headers['Content-Type'] = 'application/zip' if binary is not None else 'application/json'
         with urlopen(Request(url, data=data, headers=headers, method=method), timeout=90) as response:
-            return None if response.status == 204 else json.load(response)
+            return json.load(response)
 
     def optional(path):
         try:
@@ -40,84 +107,58 @@ def main():
                 raise
             return None
 
-    for name, expected in plan['source_hashes_lf'].items():
-        if hashlib.sha256((ROOT / name).read_bytes().replace(b'\r\n', b'\n')).hexdigest() != expected:
-            raise ValueError('Compiled source differs: ' + name)
-    assets = []
-    for asset in plan['assets']:
-        blob = request('/git/blobs/' + asset['blob_sha'])
-        data = base64.b64decode(blob['content'])
-        if hashlib.sha256(data).hexdigest() != asset['sha256']:
-            raise ValueError('Installation ZIP hash differs: ' + asset['name'])
-        with ZipFile(io.BytesIO(data)) as archive:
-            if archive.testzip() is not None or sorted(archive.namelist()) != sorted(asset['entries']):
-                raise ValueError('Installation ZIP contents differ: ' + asset['name'])
-        assets.append((asset, data))
-
-    # Keep superseded candidate attachments in an unpublished draft.
-    for old in plan.get('hide_releases', []):
-        release = request('/releases/' + str(old['id']))
-        if release['tag_name'] != old['tag']:
-            raise ValueError('Candidate release changed')
-        if not release['draft']:
-            request('/releases/' + str(old['id']), 'PATCH', {'draft': True})
-
-    tag = plan['tag']
-    commit = plan.get('release_source_commit', os.environ['GITHUB_SHA'])
-    replacement = plan.get('replace_release')
-    if replacement:
-        release = request('/releases/' + str(replacement['id']))
-        if release['tag_name'] not in (tag, replacement['old_tag']):
-            raise ValueError('Release to correct changed')
-        if release['tag_name'] == replacement['old_tag'] and release['target_commitish'] != replacement['old_commit']:
-            raise ValueError('Previous release source changed')
-    else:
-        release = optional('/releases/tags/' + quote(tag, safe=''))
-
+    tag = 'v' + plan['version']
+    commit = manifest['source_git']['commit']
     ref = optional('/git/ref/tags/' + quote(tag, safe=''))
-    if ref is None:
-        request('/git/refs', 'POST', {'ref': 'refs/tags/' + tag, 'sha': commit})
-    elif ref['object']['sha'] != commit:
-        raise ValueError('Release tag points to another commit')
-
-    body = plan['body'] + '\n\n<details>\n<summary>源码版本与文件校验</summary>\n\n'
-    body += '源码提交：`' + commit + '`\n\nSHA256：\n\n'
-    body += '\n'.join('- `' + asset['name'] + '`: `' + asset['sha256'] + '`' for asset, _ in assets)
-    body += '\n\n</details>'
+    if ref and ref['object']['sha'] != commit:
+        raise ValueError('Existing release tag points to another commit; retained')
+    release = optional('/releases/tags/' + quote(tag, safe=''))
+    if release is not None and release['target_commitish'] != commit and ref is None:
+        raise ValueError('Existing draft targets another source commit; retained')
+    expected_assets = {asset['file']: asset for asset, _ in assets}
+    existing = {item['name']: item for item in release.get('assets', [])} if release else {}
+    if set(existing) - set(expected_assets):
+        raise ValueError('Existing release has other attachments; retained')
+    for name, old in existing.items():
+        if old.get('digest') != 'sha256:' + expected_assets[name]['sha256']:
+            raise ValueError('Same-named attachment has different content; retained: ' + name)
+    title = tag + ' · ' + plan['name']
     if release is None:
         release = request('/releases', 'POST', {'tag_name': tag, 'target_commitish': commit,
-            'name': plan['name'], 'body': body, 'draft': True, 'prerelease': False})
-    elif replacement and release['tag_name'] == replacement['old_tag']:
-        release = request('/releases/' + str(release['id']), 'PATCH', {'draft': True})
-
-    existing = {item['name']: item for item in release.get('assets', [])}
+            'name': title, 'body': body, 'draft': True, 'prerelease': False})
     for asset, data in assets:
-        previous = asset.get('previous_name', asset['name'])
-        old = existing.get(asset['name']) or existing.get(previous)
-        if old:
-            if old.get('digest') != 'sha256:' + asset['sha256']:
-                raise ValueError('Existing asset hash differs: ' + old['name'])
-            request('/releases/assets/' + str(old['id']), 'PATCH',
-                    {'name': asset['name'], 'label': asset.get('label', '')})
-        else:
-            uploaded = request(release['upload_url'].split('{')[0] + '?name=' + quote(asset['name']), 'POST', binary=data)
+        if asset['file'] not in existing:
+            uploaded = request(release['upload_url'].split('{')[0] + '?name=' + quote(asset['file']),
+                               'POST', binary=data)
             if uploaded.get('digest') != 'sha256:' + asset['sha256']:
-                raise ValueError('Uploaded asset hash differs')
+                raise ValueError('Uploaded attachment hash differs; draft retained')
     current = request('/releases/' + str(release['id']) + '/assets')
-    if {a['name'] for a in current} != {a['name'] for a, _ in assets}:
-        raise ValueError('Release installation asset set differs')
+    if {item['name']: item.get('digest') for item in current} != {
+            asset['file']: 'sha256:' + asset['sha256'] for asset, _ in assets}:
+        raise ValueError('Release attachment set or hashes differ; draft retained')
     release = request('/releases/' + str(release['id']), 'PATCH', {'tag_name': tag,
-        'target_commitish': commit, 'name': plan['name'], 'body': body, 'draft': False,
+        'target_commitish': commit, 'name': title, 'body': body, 'draft': False,
         'prerelease': False, 'make_latest': 'true'})
-
-    if replacement and replacement['old_tag'] != tag:
-        path = '/git/ref/tags/' + quote(replacement['old_tag'], safe='')
-        old_ref = optional(path)
-        if old_ref:
-            if old_ref['object']['sha'] != replacement['old_commit']:
-                raise ValueError('Old tag changed; retained')
-            request('/git/refs/tags/' + quote(replacement['old_tag'], safe=''), 'DELETE')
     print(release['html_url'])
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--packages', type=Path, default=ROOT / 'build/packages')
+    parser.add_argument('--publish', action='store_true', help='Publish the verified, accepted packages to GitHub')
+    args = parser.parse_args()
+    plan = json.loads((ROOT / 'release_plan.json').read_text(encoding='utf-8'))
+    manifest, assets = validate_packages(args.packages, plan)
+    body = plan['body'].replace('{version}', plan['version'])
+    body += '\n\n<details>\n<summary>源码版本与文件校验</summary>\n\n'
+    body += '源码提交：`' + manifest['source_git']['commit'] + '`\n\nSHA256：\n\n'
+    body += '\n'.join('- `' + asset['file'] + '`: `' + asset['sha256'] + '`' for asset, _ in assets)
+    body += '\n\n</details>'
+    if args.publish:
+        publish(plan, manifest, assets, body)
+    else:
+        print('Validated local packages. Preview only; use --publish after final acceptance.\n')
+        print(body)
 
 
 if __name__ == '__main__':

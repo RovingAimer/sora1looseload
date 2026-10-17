@@ -8,6 +8,7 @@
 #pragma comment(linker, "/EXPORT:XInputSetState=XInputSetState,@3")
 
 #include <Windows.h>
+#include <cstdlib>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,15 +36,19 @@ extern "C" {
     f_XInputGetState s_XInputGetState = NULL;
     f_XInputSetState s_XInputSetState = NULL;
 
-    void load()
+    INIT_ONCE s_initializeOnce = INIT_ONCE_STATIC_INIT;
+
+    BOOL CALLBACK InitializeSystemXInput(PINIT_ONCE, PVOID, PVOID*)
     {
-        WCHAR path[MAX_PATH];
-        GetSystemDirectoryW(path, MAX_PATH);
+        WCHAR path[MAX_PATH] = {};
+        const UINT length = GetSystemDirectoryW(path, MAX_PATH);
+        if (!length || length > MAX_PATH - _countof(L"\\XInput1_4.dll"))
+            return TRUE; // Cache failure too; wrappers keep their existing fallbacks.
         wcscat_s(path, L"\\XInput1_4.dll");
         s_instance = LoadLibraryW(path);
 
         if (!s_instance)
-            return;
+            return TRUE;
 
         s_XInputEnable = (f_XInputEnable)GetProcAddress(s_instance, "XInputEnable");
         s_XInputGetAudioDeviceIds = (f_XInputGetAudioDeviceIds)GetProcAddress(s_instance, "XInputGetAudioDeviceIds");
@@ -52,20 +57,19 @@ extern "C" {
         s_XInputGetKeystroke = (f_XInputGetKeystroke)GetProcAddress(s_instance, "XInputGetKeystroke");
         s_XInputGetState = (f_XInputGetState)GetProcAddress(s_instance, "XInputGetState");
         s_XInputSetState = (f_XInputSetState)GetProcAddress(s_instance, "XInputSetState");
+        return TRUE;
     }
 
     void WINAPI XInputEnable(BOOL enable)
     {
-        if (!s_XInputEnable)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (s_XInputEnable)
             s_XInputEnable(enable);
     }
 
     DWORD WINAPI XInputGetAudioDeviceIds(DWORD dwUserIndex, LPWSTR pRenderDeviceId, UINT* pRenderCount, LPWSTR pCaptureDeviceId, UINT* pCaptureCount)
     {
-        if (!s_XInputGetAudioDeviceIds)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (!s_XInputGetAudioDeviceIds)
             return ERROR_DEVICE_NOT_CONNECTED;
         return s_XInputGetAudioDeviceIds(dwUserIndex, pRenderDeviceId, pRenderCount, pCaptureDeviceId, pCaptureCount);
@@ -73,8 +77,7 @@ extern "C" {
 
     DWORD WINAPI XInputGetBatteryInformation(DWORD dwUserIndex, BYTE devType, XINPUT_BATTERY_INFORMATION* pBatteryInformation)
     {
-        if (!s_XInputGetBatteryInformation)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (!s_XInputGetBatteryInformation)
             return ERROR_DEVICE_NOT_CONNECTED;
         return s_XInputGetBatteryInformation(dwUserIndex, devType, pBatteryInformation);
@@ -82,8 +85,7 @@ extern "C" {
 
     DWORD WINAPI XInputGetCapabilities(DWORD dwUserIndex, DWORD dwFlags, XINPUT_CAPABILITIES* pCapabilities)
     {
-        if (!s_XInputGetCapabilities)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (!s_XInputGetCapabilities)
             return ERROR_DEVICE_NOT_CONNECTED;
         return s_XInputGetCapabilities(dwUserIndex, dwFlags, pCapabilities);
@@ -91,8 +93,7 @@ extern "C" {
 
     DWORD WINAPI XInputGetKeystroke(DWORD dwUserIndex, DWORD dwReserved, XINPUT_KEYSTROKE* pKeystroke)
     {
-        if (!s_XInputGetKeystroke)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (!s_XInputGetKeystroke)
             return ERROR_DEVICE_NOT_CONNECTED;
         return s_XInputGetKeystroke(dwUserIndex, dwReserved, pKeystroke);
@@ -100,8 +101,7 @@ extern "C" {
 
     DWORD WINAPI XInputGetState(DWORD dwUserIndex, XINPUT_STATE* pState)
     {
-        if (!s_XInputGetState)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (!s_XInputGetState)
             return ERROR_DEVICE_NOT_CONNECTED;
         return s_XInputGetState(dwUserIndex, pState);
@@ -109,8 +109,7 @@ extern "C" {
 
     DWORD WINAPI XInputSetState(DWORD dwUserIndex, void* pVibration)
     {
-        if (!s_XInputSetState)
-            load();
+        InitOnceExecuteOnce(&s_initializeOnce, InitializeSystemXInput, nullptr, nullptr);
         if (!s_XInputSetState)
             return ERROR_DEVICE_NOT_CONNECTED;
         return s_XInputSetState(dwUserIndex, pVibration);

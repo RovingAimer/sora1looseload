@@ -420,3 +420,6 @@ FodyWeavers.xsd
 # Standalone fork build output
 /build/
 /__pycache__/
+
+# Local design and planning records
+docs/superpowers/

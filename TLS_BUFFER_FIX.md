@@ -1,19 +1,7 @@
-# LocaleHandler 输出缓冲布局
+# LocaleHandler 输出缓冲
 
-加载器调用游戏的 `LocaleHandler` 时，为输出路径提供与目标函数写入结构相符的缓冲区：
+调用游戏 `LocaleHandler` 时，加载器为输出路径提供 `0x204` 字节对象：前 `0x200` 字节是路径字符区，末尾 `0x4` 字节是长度字段。`InitialFileCheck` 为每个游戏线程使用独立的 `thread_local` 缓冲区，并在调用原始函数前清零首字节。
 
-| 偏移 | 大小 | 内容 |
-| --- | ---: | --- |
-| `0x000..0x1FF` | `0x200` 字节 | 路径字符区 |
-| `0x200..0x203` | `0x004` 字节 | DWORD 长度字段 |
-| 总计 | `0x204` 字节 | 完整输出对象 |
+若当前 locale 对应的 loose 文件存在，加载器把其路径交给原始 `InitialFileCheck`。资源 hook 的目标签名和失败处理见 [README_FORK.md](README_FORK.md)。
 
-`InitialFileCheck` 使用每线程存储保存该对象：
-
-```cpp
-static thread_local char localizedPath[0x204];
-```
-
-调用前将首字节清零，再把缓冲区传给原始 `LocaleHandler`。当字符区包含路径时，加载器会按当前 locale 检查游戏目录中的对应 loose 文件，并将选中的路径交给原始 `InitialFileCheck`。每个游戏线程使用独立缓冲区。
-
-加载器使用的资源 hook 签名边界与对白核心的 EXE 校验分别见 [README_FORK.md](https://github.com/RovingAimer/sora1looseload/blob/main/README_FORK.md) 和[核心支持版本说明](https://github.com/RovingAimer/sora1dialogueoutline/blob/main/INSTALL.md)。
+该实现包含于 [v0.2.0](https://github.com/RovingAimer/sora1looseload/releases/tag/v0.2.0)，本次用户确认字幕描边与相机反虚化运行正常。

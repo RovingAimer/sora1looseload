@@ -8,6 +8,7 @@ extern "C" {
 extern const char SoraLooseLoaderLicenseNotice[] = R"MITNOTICE(
 sora1looseload build and integration additions
 Copyright (c) 2026 DialogueOutline contributors
+Copyright (c) 2026 SoraMod contributors
 
 Repository LICENSE
 MIT License

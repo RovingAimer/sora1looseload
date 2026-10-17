@@ -158,6 +158,9 @@ nmake
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="LicenseNotice.h" />
+    <ClInclude Include="mod_loader.h" />
+    <ClInclude Include="pe_module_check.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
